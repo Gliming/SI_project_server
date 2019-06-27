@@ -7,6 +7,7 @@ import com.example.bean.orderItem;
 import com.example.dao.itemRepository;
 import com.example.dao.largeOrderRepository;
 import com.example.dao.orderRepository;
+import com.google.gson.reflect.TypeToken;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import brave.sampler.Sampler;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -61,10 +63,6 @@ public class DataServiceApplication{
         largeOrderRepository.save(largeOrder);
     }
 
-    public List<order> get_orders_by_user(String user){
-        return orderRepository.findByUser(user);
-    }
-
 	public static void main(String[] args) {
 	    SpringApplication.run(DataServiceApplication.class, args);
 	}
@@ -101,14 +99,14 @@ public class DataServiceApplication{
     }
 
     @RequestMapping("/add_item")
-    public boolean add_item(@RequestParam(value = "itemName")String itemName, @RequestParam(value = "price") Integer price){
+    public String add_item(@RequestParam(value = "itemName")String itemName, @RequestParam(value = "price") Integer price){
         if (price <= 0 || itemName == null)
-            return false;
+            return "false";
         item newItem = new item(itemName, price);
         System.out.println(itemName);
         System.out.println(price);
         insert_item(newItem);
-        return true;
+        return newItem.id;
     }
 
 	@RequestMapping("/buy")
@@ -118,7 +116,7 @@ public class DataServiceApplication{
 	}
 
     @RequestMapping("/add_to_large_order")
-	public boolean add_to_large_order(@RequestParam(value ="id")String id, @RequestBody order order){
+	public String add_to_large_order(@RequestParam(value ="id")String id, @RequestBody order order){
 //		JSONObject orderObj = new JSONObject(order_str);
 //		order order = new order();
 //		order.user = orderObj.getString("username");
@@ -128,30 +126,8 @@ public class DataServiceApplication{
         largeOrder.orders.add(order);
         largeOrder.peopleNum = largeOrder.peopleNum + 1;
         update_large_order(largeOrder);
-		return true;
+		return order.id;
 	}
-
-    @RequestMapping("/get_orders")
-	public String get_orders(@RequestParam(value = "username")String user) {
-        List<order> orders = get_orders_by_user(user);
-        JSONArray jsonOrderArray = new JSONArray();
-        order tmpOrder = null;
-        for (int i = 0; i < orders.size(); i++) {
-            tmpOrder = orders.get(i);
-            JSONObject orderObj = new JSONObject();
-            orderObj.put("user", tmpOrder.user);
-            JSONArray jsonItemList = new JSONArray();
-            for (int j = 0; j < tmpOrder.itemList.size(); j++) {
-                JSONObject orderItemObj = new JSONObject();
-                orderItemObj.put("itemId", tmpOrder.itemList.get(j).itemId);
-                orderItemObj.put("itemNum", tmpOrder.itemList.get(j).itemNum);
-                jsonItemList.put(orderItemObj);
-            }
-            orderObj.put("itemList", jsonItemList);
-            jsonOrderArray.put(orderObj);
-        }
-        return jsonOrderArray.toString();
-    }
 
     @Bean
     public Sampler defaultSampler(){
